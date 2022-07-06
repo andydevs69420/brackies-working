@@ -96,6 +96,6 @@ def evaluate(_opt:str, _lhs:int or float, _rhs:int or float):
 
 
 
-def println(_object:Obj):
-    print(_object.toString().pyData())
+def println(_object:FunctionParameter):
+    print(_object.pop().toString().pyData())
     return Null(None)

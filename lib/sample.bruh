@@ -1,5 +1,19 @@
 
-var x:Str = "Hello, World!!";
 
-println.type();
+function add:Null(a:Int, b:Int) {
+
+    println("Multiplied: ".concat(multiply(a,b).toString()));
+    return println(a+b);
+
+}
+
+
+function multiply:Int(_a:Int, _b:Int) {
+    return _a * _b;
+}
+
+var x:Null = add(5, 2);
+
+println();
+
 

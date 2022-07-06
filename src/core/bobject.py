@@ -14,8 +14,9 @@ class BBuiltinObject:
     Null = "Null"
     List = "List"
     Dict = "Dict"
-    BuiltinFunc = "BuiltinFunc"
-    BoundMethod = "BoundMethod"
+    BuiltinFunc  = "BuiltinFunc"
+    BoundMethod  = "BoundMethod"
+    BrackiesCode = "BrackiesCode"
     Func = "Func"
 
 __ALL__ = [ 
@@ -31,6 +32,7 @@ __ALL__ = [
     BBuiltinObject.Dict,
     BBuiltinObject.BuiltinFunc,
     BBuiltinObject.BoundMethod,
+    BBuiltinObject.BrackiesCode,
     BBuiltinObject.Func,
 ]
 
@@ -52,6 +54,19 @@ class BuiltinFunc:pass
 class BoundMethod:pass
 
 
+class FunctionParameter(object):
+    def __init__(self):
+        self.__params:list[Obj] = []
+    
+    def push(self, _obj:Obj):
+        self.__params.append(_obj)
+    
+    def pop(self):
+        return self.__params.pop()
+
+    def top(self):
+        return self.__params[-1]
+
 
 class Obj_Interface(object):
 
@@ -59,15 +74,15 @@ class Obj_Interface(object):
         self.boundmethods = ({})
     
     #bound: [toString => Str]
-    def type(self, *arg):
+    def type(self, _param:FunctionParameter=None):
         return Type(self)
 
     #bound: [toString => Str]
-    def typeString(self, *arg):
+    def typeString(self, _param:FunctionParameter=None):
         return Str(f"{ type(self).__name__ }")
 
     #bound: [toString => Str]
-    def toString(self, *arg):
+    def toString(self, _param:FunctionParameter=None):
         return Str(f"{ type(self).__name__ }(id = { hex(id(self)) })")
     
 
@@ -101,31 +116,18 @@ class Type(Obj):
     def __init__(self, _obj:Obj):
         super().__init__()
         self.dtype = _obj
-
-    #bound: [toString => Str]
-    def toString(self, *arg):
-        return Str(f"{type(self).__name__}(type = {type(self.dtype).__name__})")
-
-
-##################       OTHERS      ##################
-class BrackiesCode(Obj):
-    def __init__(self, _code:list[ByteCodeChunk]):
-        super().__init__()
-        self.instructions = _code
-
-    def getInstructions(self):
-        return self.instructions
+        self.__add_bound__("equals", 1, self.equals)
     
-    #bound: [toString => Str]
-    def toString(self, *arg):
-        string = ""
-        index = 0
-        for i in self.instructions:
-            string += i.__str__()
-            if index < len(self.instructions) - 1:
-                string += ","
+    def pyData(self):
+        return type(self.dtype)
+    
+    #bound: [equals => Bool]
+    def equals(self, _param:FunctionParameter=None):
+        return Bool(self.pyData() == _param.pop().type().pyData())
 
-        return Str("[" + string + "]")
+    #bound: [toString => Str]
+    def toString(self, _param:FunctionParameter=None):
+        return Str(f"{type(self).__name__}(type = {type(self.dtype).__name__})")
 
 
 ################## BUILTIN DATATYPE ####################
@@ -138,7 +140,7 @@ class Num(Obj):
         return self.host_data
 
     #bound: [toString => Str]
-    def toString(self, *arg):
+    def toString(self, _param:FunctionParameter=None):
         return Str(f"{self.host_data}")
     
     def __str__(self):
@@ -162,12 +164,12 @@ class Str(Obj):
         return self.host_data
 
     #bound: [concat => Str]
-    def concat(self, _str_other:Str):
-        if  type(_str_other) != Str:return Bool(False)
-        return Str(self.host_data + _str_other.pyData())
+    def concat(self, _str_other:FunctionParameter):
+        if  type(_str_other.top()) != Str:return Bool(False)
+        return Str(self.host_data + _str_other.pop().pyData())
 
     #bound: [toString => Str]
-    def toString(self, *arg):
+    def toString(self, _param:FunctionParameter=None):
         return self
     
     def __str__(self):
@@ -182,7 +184,7 @@ class Bool(Obj):
         return self.host_data
 
     #bound: [toString => Str]
-    def toString(self, *arg):
+    def toString(self, _param:FunctionParameter=None):
         return Str("true" if self.host_data else "false")
     
     def __str__(self):
@@ -197,7 +199,7 @@ class Null(Obj):
         return self.host_data
 
     #bound: [toString => Str]
-    def toString(self, *arg):
+    def toString(self, _param:FunctionParameter=None):
         return Str("null")
     
     def __str__(self):
@@ -219,11 +221,11 @@ class BuiltinFunc(Obj):
         return self.function
     
     #bound: [getName => Str]
-    def getName(self, *arg):
+    def getName(self, _param:FunctionParameter=None):
         return Str(self.name)
     
     #bound: [toString => Str]
-    def toString(self, *arg):
+    def toString(self, _param:FunctionParameter=None):
         return Str(f"{ type(self).__name__ }(id = { hex(id(self)) }, name = {self.name})")
     
     def __str__(self):
@@ -231,6 +233,9 @@ class BuiltinFunc(Obj):
 
 class BoundMethod(Obj):
     def __init__(self, _name:str, _param_count:int, _callable:callable):
+        # Do not initialize super!!!
+        self.boundmethods = ({})
+        ###########################
         self.name = _name
         self.paramc = _param_count
         self.callable = _callable
@@ -239,16 +244,37 @@ class BoundMethod(Obj):
         return self.callable
     
     #bound: [getName => Str]
-    def getName(self, *arg):
+    def getName(self, _param:FunctionParameter=None):
         return Str(self.name)
     
     #bound: [toString => Str]
-    def toString(self, *arg):
+    def toString(self, _param:FunctionParameter=None):
         return  Str(f"{ type(self).__name__ }(id = { hex(id(self)) }, name = {self.name})")
     
     def __str__(self):
         return self.toString().pyData()
 
+
+##################       OTHERS      ##################
+class BrackiesCode(Obj):
+    def __init__(self, _code:list[ByteCodeChunk]):
+        super().__init__()
+        self.instructions = _code
+
+    def getInstructions(self):
+        return self.instructions
+    
+    #bound: [toString => Str]
+    def toString(self, _param:FunctionParameter=None):
+        string = ""
+        index = 0
+        for i in self.instructions:
+            string += i.__str__()
+            if index < len(self.instructions) - 1:
+                string += ", "
+            index += 1
+
+        return Str("[" + string + "]")
 
 class Func(Obj):
     def __init__(self, _name:str, _bytecode:BrackiesCode):
@@ -259,15 +285,15 @@ class Func(Obj):
         self.__add_bound__("getByteCode", 0, self.getByteCode)
     
     #bound: [getName => Str]
-    def getName(self, *arg):
+    def getName(self, _param:FunctionParameter=None):
         return Str(self.name)
     
     #bound: [getByteCode => BrackiesCode]
-    def getByteCode(self, *arg):
+    def getByteCode(self, _param:FunctionParameter=None):
         return self.bytecode
     
     #bound: [toString => Str]
-    def toString(self, *arg):
+    def toString(self, _param:FunctionParameter=None):
         return Str(f"{ type(self).__name__ }(id = { hex(id(self)) }, name = {self.name})")
     
     def __str__(self):

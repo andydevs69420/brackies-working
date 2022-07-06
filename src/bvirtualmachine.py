@@ -364,12 +364,25 @@ def call_expr(_bytecode:ByteCodeChunk):
     # otherwise callable
     func_name = _must_be_callable.getName()
 
-    ############# BUILTIN CALL ####################
+    ############# BUILTIN CALL ##################
     if  _must_be_callable.typeString().pyData() == BBuiltinObject.BuiltinFunc:
-        null = _must_be_callable.pyData()(get__from_heap(pop__from_estack()))
-        mem_address = push__to_heap(null)
-        push__to_estack(mem_address)
-        return
+        symbol_prop = SymbolTable.lookup(func_name.pyData())
+        builtin = _must_be_callable
+        
+        if  symbol_prop["param_count"] != call_args_count:
+            # throws error
+            return errorHandler.throw__error(
+                errorType.TYPE_ERROR, "function " + func_name.pyData() + "(...) expected parameter count \"" + str(symbol_prop["param_count"]) + "\", got \"" + str(call_args_count) + "\".",
+                trace__token(call_operator)
+            )
+        
+        func_param_stack = FunctionParameter()
+        for _____ in range(call_args_count):
+            func_param_stack.push(get__from_heap(pop__from_estack()))
+        
+        result = builtin.pyData()(func_param_stack)
+        mem_address = push__to_heap(result)
+        return push__to_estack(mem_address)
 
     ############# BOUND CALL ####################
     if  _must_be_callable.typeString().pyData() == BBuiltinObject.BoundMethod:
@@ -380,11 +393,14 @@ def call_expr(_bytecode:ByteCodeChunk):
                 errorType.TYPE_ERROR, "function " + func_name.pyData() + "(...) expected parameter count \"" + str(bound.paramc) + "\", got \"" + str(call_args_count) + "\".",
                 trace__token(call_operator)
             )
-        param = get__from_heap(pop__from_estack())
-        result = bound.pyData()(param)
+        
+        func_param_stack = FunctionParameter()
+        for _____ in range(call_args_count):
+            func_param_stack.push(get__from_heap(pop__from_estack()))
+
+        result = bound.pyData()(func_param_stack)
         mem_address = push__to_heap(result)
-        push__to_estack(mem_address)
-        return
+        return push__to_estack(mem_address)
     
 
     ########### FUNCTION #########################
@@ -409,6 +425,7 @@ def call_expr(_bytecode:ByteCodeChunk):
         if  BVirtualMachine.NAMED_CALL_STACK[-1] == func_name.pyData():
             BVirtualMachine.CALL_COUNTER[func_name.pyData()] += 1
         else:
+            BVirtualMachine.CALL_COUNTER[func_name.pyData()] = 1
             BVirtualMachine.NAMED_CALL_STACK.append(func_name.pyData())
 
     # push function instructions
