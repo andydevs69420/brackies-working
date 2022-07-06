@@ -138,8 +138,8 @@ class BVirtualMachine(GarbageCollector):
 
     @staticmethod
     def run():
-        for _code in BVirtualMachine.INSTRUCTIONS:
-            print(_code.__str__())
+        # for _code in BVirtualMachine.INSTRUCTIONS:
+        #     print(_code.__str__())
 
         BVirtualMachine.STACK_FRAME.push(BVirtualMachine.INSTRUCTIONS)
 
@@ -163,7 +163,7 @@ class BVirtualMachine(GarbageCollector):
             
         log__info("Finished!")
         # for each_remaining in BVirtualMachine.EVAL__STACK:
-        #     log__info(BVirtualMachine.get_from_heap(each_remaining).toString().pyData())
+        #     log__info(get__from_heap(each_remaining).toString().pyData())
 
     @staticmethod
     def dump_instruction():
@@ -172,23 +172,61 @@ class BVirtualMachine(GarbageCollector):
         exit(1)
 
 
+
+
+####################### USABLE FUNCTIONS ###########################
+
+
+
+########### HEAPM OPERATIONS ###########
+# gets object stored in virtual heap memory
+def get__from_heap(_address:int):
+    return BVirtualMachine.get_from_heap(_address)
+
+# stores an object to heap
+def push__to_heap(_obj:Obj):
+    return BVirtualMachine.push_to_heap(_obj)
+
+########### STACK OPERATIONS ###########
+# pushes target address to eval stack
+def push__to_estack(_address:int):
+    return BVirtualMachine.EVAL__STACK.append(_address)
+
+# pop target address from eval stack
+def pop__from_estack():
+    return BVirtualMachine.EVAL__STACK.pop()
+
+# gets top index
+def estack_get_top():
+    return len(BVirtualMachine.EVAL__STACK) - 1
+
+
+
+
+
+
+
+
+
+############################ START ################################
+
 def load_builtins(_bytecode:ByteCodeChunk):
     ########## TEMPORARY LOADER ##############
-    __x_builtins_x__ = tuple([{
+    __x_builtins_x__ = tuple([({
         "symbol": "println",
         "param_count": 1,
         "return_type": BBuiltinObject.Null,
         "data_type": BBuiltinObject.BuiltinFunc,
-        "points_to": BVirtualMachine.push_to_heap(BuiltinFunc("println", println)),
-    }])
+        "points_to": push__to_heap(BuiltinFunc("println", println)),
+    })])
 
-    for builtin in __x_builtins_x__:
-        SymbolTable.insert(**builtin)
+    for each_builtin in __x_builtins_x__:
+        SymbolTable.insert(**each_builtin)
 
 def push_const(_bytecode:ByteCodeChunk):
-    BVirtualMachine.EVAL__STACK.append(_bytecode.getValueOf("mem_address"))
+    push__to_estack(_bytecode.getValueOf("mem_address"))
     # mark as zero ref
-    BVirtualMachine.REFERENCE_COUNTER[len(BVirtualMachine.EVAL__STACK) - 1] = 0
+    BVirtualMachine.REFERENCE_COUNTER[estack_get_top()] = 0
 
 def push_name(_bytecode:ByteCodeChunk):
     
@@ -204,10 +242,10 @@ def push_name(_bytecode:ByteCodeChunk):
     obj_pointed_address = symbol_prop["points_to"]
 
     # push to stack
-    BVirtualMachine.EVAL__STACK.append(obj_pointed_address)
+    push__to_estack(obj_pointed_address)
 
 def push_attrib(_bytecode:ByteCodeChunk):
-    top = BVirtualMachine.get_from_heap(BVirtualMachine.EVAL__STACK[-1])
+    top = get__from_heap(pop__from_estack())
 
     if  not top.__has_bound__(_bytecode.getValueOf("symbol")):
         # throws error
@@ -215,43 +253,50 @@ def push_attrib(_bytecode:ByteCodeChunk):
             errorType.ATTRIBUTE_ERROR, top.typeString().pyData() + " does not contains attribute \"" + _bytecode.getValueOf("symbol") + "\"",
             trace__token(_bytecode.getValueOf("raw"))
         )
-    # BVirtualMachine.EVAL__STACK.pop()
+    # pop__from_estack()
     attr_obj = top.__get_bound__(_bytecode.getValueOf("symbol"))
-    attr_addr = BVirtualMachine.push_to_heap(attr_obj)
-    BVirtualMachine.EVAL__STACK.append(attr_addr)
+    attr_addr = push__to_heap(attr_obj)
+    push__to_estack(attr_addr)
 
 def store_func(_bytecode:ByteCodeChunk):
     symbol = _bytecode.getValueOf("symbol")
-    obj_address = BVirtualMachine.EVAL__STACK.pop()
 
-    var = SymbolTable.lookup(symbol)
-    dtype = BVirtualMachine.get_from_heap(obj_address).typeString().pyData()
+    obj_address = pop__from_estack()
 
-    if  var["data_type"] != dtype:
+    function = SymbolTable.lookup(symbol)
+    datatype = (get__from_heap(obj_address)
+                .typeString().pyData())
+
+    if  function["data_type"] != datatype:
         # throws error
         return errorHandler.throw__error(
-            errorType.TYPE_ERROR, "\"" + symbol + "\" is declaired as \"" + var["data_type"] + "\", got \"" + dtype + "\".",
-            trace__token(var["token"])
+            errorType.TYPE_ERROR, "\"" + symbol + "\" is declaired as \"" + function["data_type"] + "\", got \"" + datatype + "\".",
+            trace__token(function["token"])
         )
-
-    SymbolTable.update(symbol, points_to =  obj_address)
+    
+    # update index where it is pointed
+    SymbolTable.update(symbol, points_to = obj_address)
 
     # increase ref count
     BVirtualMachine.increment_count(obj_address)
 
 def store_name(_bytecode:ByteCodeChunk):
     symbol = _bytecode.getValueOf("symbol")
-    obj_address = BVirtualMachine.EVAL__STACK.pop()
-    var = SymbolTable.lookup(symbol)
-    dtype = BVirtualMachine.get_from_heap(obj_address).typeString().pyData()
     
-    if  var["data_type"] != dtype:
+    obj_address = pop__from_estack()
+
+    global_v = SymbolTable.lookup(symbol)
+    datatype = (get__from_heap(obj_address)
+                .typeString().pyData())
+    
+    if  global_v["data_type"] != datatype:
         # throws error
         return errorHandler.throw__error(
-            errorType.TYPE_ERROR, "\"" + symbol + "\" is declaired as \"" + var["data_type"] + "\", got \"" + dtype + "\".",
-            trace__token(var["token"])
+            errorType.TYPE_ERROR, "\"" + symbol + "\" is declaired as \"" + global_v["data_type"] + "\", got \"" + datatype + "\".",
+            trace__token(global_v["token"])
         )
 
+    # update index where it is pointed
     SymbolTable.update(symbol, points_to = obj_address)
 
     # increase ref count
@@ -260,18 +305,20 @@ def store_name(_bytecode:ByteCodeChunk):
 def store_local(_bytecode:ByteCodeChunk):
     symbol = _bytecode.getValueOf("symbol")
 
-    obj_address = BVirtualMachine.EVAL__STACK.pop()
+    obj_address = pop__from_estack()
 
-    var = SymbolTable.lookup(symbol)
-    dtype = BVirtualMachine.get_from_heap(obj_address).typeString().pyData()
+    localvar = SymbolTable.lookup(symbol)
+    datatype = (get__from_heap(obj_address)
+                .typeString().pyData())
 
-    if  var["data_type"] != dtype:
+    if  localvar["data_type"] != datatype:
         # throws error
         return errorHandler.throw__error(
-            errorType.TYPE_ERROR, "\"" + symbol + "\" is declaired as \"" + var["data_type"] + "\", got \"" + dtype + "\".",
-            trace__token(var["token"])
+            errorType.TYPE_ERROR, "\"" + symbol + "\" is declaired as \"" + localvar["data_type"] + "\", got \"" + datatype + "\".",
+            trace__token(localvar["token"])
         )
 
+    # update index where it is pointed
     SymbolTable.update(symbol, points_to = obj_address)
 
     # increase ref count
@@ -280,8 +327,8 @@ def store_local(_bytecode:ByteCodeChunk):
 
 def binary_expr(_bytecode:ByteCodeChunk):
    
-    lhs = BVirtualMachine.get_from_heap(BVirtualMachine.EVAL__STACK.pop())
-    rhs = BVirtualMachine.get_from_heap(BVirtualMachine.EVAL__STACK.pop())
+    lhs = get__from_heap(pop__from_estack())
+    rhs = get__from_heap(pop__from_estack())
 
     opt = _bytecode.getValueOf("operator")
     opt_as_str = opt.getSymbol()
@@ -294,18 +341,19 @@ def binary_expr(_bytecode:ByteCodeChunk):
         )
 
     new_obj = evaluate(opt_as_str, lhs.pyData(), rhs.pyData())
-    object_address = BVirtualMachine.push_to_heap(new_obj)
-    BVirtualMachine.EVAL__STACK.append(object_address)
+    object_address = push__to_heap(new_obj)
+    push__to_estack(object_address)
 
 def pop_top(_bytecode:ByteCodeChunk):
-    BVirtualMachine.EVAL__STACK.pop()
+    pop__from_estack()
 
 def call_expr(_bytecode:ByteCodeChunk):
 
     call_operator = _bytecode.getValueOf("operator")
     call_args_count = _bytecode.getValueOf("arg_count")
 
-    _must_be_callable = BVirtualMachine.get_from_heap(BVirtualMachine.EVAL__STACK.pop())
+    _must_be_callable = get__from_heap(pop__from_estack())
+    
     if  _must_be_callable.typeString().pyData() not in (BBuiltinObject.Func, BBuiltinObject.BuiltinFunc, BBuiltinObject.BoundMethod):
         # throws error
         return errorHandler.throw__error(
@@ -315,13 +363,12 @@ def call_expr(_bytecode:ByteCodeChunk):
     
     # otherwise callable
     func_name = _must_be_callable.getName()
-    
 
     ############# BUILTIN CALL ####################
     if  _must_be_callable.typeString().pyData() == BBuiltinObject.BuiltinFunc:
-        null = _must_be_callable.pyData()(BVirtualMachine.get_from_heap(BVirtualMachine.EVAL__STACK.pop()))
-        mem_address = BVirtualMachine.push_to_heap(null)
-        BVirtualMachine.EVAL__STACK.append(mem_address)
+        null = _must_be_callable.pyData()(get__from_heap(pop__from_estack()))
+        mem_address = push__to_heap(null)
+        push__to_estack(mem_address)
         return
 
     ############# BOUND CALL ####################
@@ -333,10 +380,10 @@ def call_expr(_bytecode:ByteCodeChunk):
                 errorType.TYPE_ERROR, "function " + func_name.pyData() + "(...) expected parameter count \"" + str(bound.paramc) + "\", got \"" + str(call_args_count) + "\".",
                 trace__token(call_operator)
             )
-        param = BVirtualMachine.get_from_heap(BVirtualMachine.EVAL__STACK.pop())
+        param = get__from_heap(pop__from_estack())
         result = bound.pyData()(param)
-        mem_address = BVirtualMachine.push_to_heap(result)
-        BVirtualMachine.EVAL__STACK.append(mem_address)
+        mem_address = push__to_heap(result)
+        push__to_estack(mem_address)
         return
     
 
@@ -390,7 +437,7 @@ def return_opcode(_bytecode:ByteCodeChunk):
 
     BVirtualMachine.CALL_COUNTER.pop(func_name)
 
-    actual_return = BVirtualMachine.get_from_heap(BVirtualMachine.EVAL__STACK[-1]) # top
+    actual_return = get__from_heap(BVirtualMachine.EVAL__STACK[-1]) # top
 
     if  func_prop["return_type"] != actual_return.typeString().pyData():
         # throws error

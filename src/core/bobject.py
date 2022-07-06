@@ -14,9 +14,9 @@ class BBuiltinObject:
     Null = "Null"
     List = "List"
     Dict = "Dict"
-    Func = "Func"
     BuiltinFunc = "BuiltinFunc"
     BoundMethod = "BoundMethod"
+    Func = "Func"
 
 __ALL__ = [ 
     BBuiltinObject.Obj,
@@ -29,9 +29,9 @@ __ALL__ = [
     BBuiltinObject.Null,
     BBuiltinObject.List,
     BBuiltinObject.Dict,
-    BBuiltinObject.Func,
     BBuiltinObject.BuiltinFunc,
     BBuiltinObject.BoundMethod,
+    BBuiltinObject.Func,
 ]
 
 
@@ -44,13 +44,14 @@ class Int:pass
 class Flt:pass
 class Str:pass
 class Bool:pass
-class Null:
-    def __init__(self, x:None):pass
+class Null:pass
 class LIST:pass #TODO: implement
 class DICT:pass #TODO: implement
 class FUNC:pass
 class BuiltinFunc:pass
 class BoundMethod:pass
+
+
 
 class Obj_Interface(object):
 
@@ -75,7 +76,7 @@ class Obj_Interface(object):
             return True
         return False
     
-    def __add_bound__(self, _name:str, _argc:int, _callable:callable):
+    def __add_bound__(self, _name:str, _argc:int, _callable:callable,):
         self.boundmethods[_name] = BoundMethod(_name, _argc, _callable)
     
     def __get_bound__(self, _name:str):
@@ -105,27 +106,6 @@ class Type(Obj):
     def toString(self, *arg):
         return Str(f"{type(self).__name__}(type = {type(self.dtype).__name__})")
 
-class BoundMethod(Obj_Interface):
-    def __init__(self, _name:str, _param_count:int, _callable:callable):
-        super().__init__()
-        self.name = _name
-        self.paramc = _param_count
-        self.callable = _callable
-    
-    def pyData(self):
-        return self.callable
-    
-    #bound: [getName => Str]
-    def getName(self, *arg):
-        return Str(self.name)
-    
-    #bound: [toString => Str]
-    def toString(self, *arg):
-        return  Str(f"{ type(self).__name__ }(id = { hex(id(self)) }, name = {self.name})")
-    
-    def __str__(self):
-        return self.toString().pyData()
-
 
 ##################       OTHERS      ##################
 class BrackiesCode(Obj):
@@ -142,7 +122,7 @@ class BrackiesCode(Obj):
         index = 0
         for i in self.instructions:
             string += i.__str__()
-            if index < len(self.instructions):
+            if index < len(self.instructions) - 1:
                 string += ","
 
         return Str("[" + string + "]")
@@ -227,6 +207,49 @@ class Null(Obj):
 
 
 ########################## FUNCTION #############################
+
+class BuiltinFunc(Obj):
+    def __init__(self, _name:str, _function:callable):
+        super().__init__()
+        self.name     = _name
+        self.function = _function
+        self.__add_bound__("getName", 0, self.getName)
+    
+    def pyData(self):
+        return self.function
+    
+    #bound: [getName => Str]
+    def getName(self, *arg):
+        return Str(self.name)
+    
+    #bound: [toString => Str]
+    def toString(self, *arg):
+        return Str(f"{ type(self).__name__ }(id = { hex(id(self)) }, name = {self.name})")
+    
+    def __str__(self):
+        return self.toString().pyData()
+
+class BoundMethod(Obj):
+    def __init__(self, _name:str, _param_count:int, _callable:callable):
+        self.name = _name
+        self.paramc = _param_count
+        self.callable = _callable
+    
+    def pyData(self):
+        return self.callable
+    
+    #bound: [getName => Str]
+    def getName(self, *arg):
+        return Str(self.name)
+    
+    #bound: [toString => Str]
+    def toString(self, *arg):
+        return  Str(f"{ type(self).__name__ }(id = { hex(id(self)) }, name = {self.name})")
+    
+    def __str__(self):
+        return self.toString().pyData()
+
+
 class Func(Obj):
     def __init__(self, _name:str, _bytecode:BrackiesCode):
         super().__init__()
@@ -242,29 +265,6 @@ class Func(Obj):
     #bound: [getByteCode => BrackiesCode]
     def getByteCode(self, *arg):
         return self.bytecode
-    
-    #bound: [toString => Str]
-    def toString(self, *arg):
-        return Str(f"{ type(self).__name__ }(id = { hex(id(self)) }, name = {self.name})")
-    
-    def __str__(self):
-        return self.toString().pyData()
-
-
-
-class BuiltinFunc(Obj):
-    def __init__(self, _name:str, _function:callable):
-        super().__init__()
-        self.name     = _name
-        self.function = _function
-        self.__add_bound__("getName", 0, self.getName)
-    
-    def pyData(self):
-        return self.function
-    
-    #bound: [getName => Str]
-    def getName(self, *arg):
-        return Str(self.name)
     
     #bound: [toString => Str]
     def toString(self, *arg):
