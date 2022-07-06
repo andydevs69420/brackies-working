@@ -1,0 +1,14 @@
+
+
+println("Hello!!");
+
+
+function add:Flt(a:Int,b:Flt) {
+
+
+   add(a,b);
+   return a + b;
+}
+
+println(2 << 1);
+println(add.getByteCode());
