@@ -158,10 +158,17 @@ class Str(Obj):
     def __init__(self, _str:str):
         super().__init__()
         self.host_data = _str
+        self.__add_bound__("equals", 1, self.equals)
         self.__add_bound__("concat", 1, self.concat)
     
     def pyData(self):
         return self.host_data
+    
+
+    #bound: [equals => Bool]
+    def equals(self, _str_other:FunctionParameter):
+        if  type(_str_other.top()) != Str:return Bool(False)
+        return Bool(self.host_data == _str_other.pop().pyData())
 
     #bound: [concat => Str]
     def concat(self, _str_other:FunctionParameter):

@@ -14,6 +14,6 @@ function multiply:Int(_a:Int, _b:Int) {
 
 var x:Null = add(5, 2);
 
-println();
+println("x".equals("x"));
 
 
