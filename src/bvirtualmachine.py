@@ -226,8 +226,7 @@ def load_builtins(_bytecode:ByteCodeChunk):
         "return_type": BBuiltinObject.Null,
         "data_type": BBuiltinObject.BuiltinFunc,
         "points_to": push__to_heap(BuiltinFunc("println", println)),
-    }), 
-        ({
+    }), ({
         "symbol": "scan",
         "param_count": 1,
         "return_type": BBuiltinObject.Str,
