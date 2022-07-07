@@ -94,7 +94,12 @@ def evaluate(_opt:str, _lhs:int or float, _rhs:int or float):
 
 
 
+def scan(_object:FunctionParameter):
+    return Str(input(_object.pop().toString().pyData()))
 
+def write(_object:FunctionParameter):
+    print(_object.pop().toString().pyData(), end="")
+    return Null(None)
 
 def println(_object:FunctionParameter):
     print(_object.pop().toString().pyData())

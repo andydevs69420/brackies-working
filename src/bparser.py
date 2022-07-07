@@ -801,7 +801,7 @@ class BrackiesParser(BrackiesTokenizer):
             if  not _exp:
                 # throws error
                 return errorHandler.throw__error(
-                    errorType.SYNTAX_ERROR, "an expression was expected after \"" + _opt.getSymbol() + "\" symbol!",
+                    errorType.SYNTAX_ERROR, "an expression is expected after \"" + _opt.getSymbol() + "\" symbol!",
                     trace__token(_opt)
                 )
             # returns unary expr node
@@ -821,7 +821,7 @@ class BrackiesParser(BrackiesTokenizer):
         if  not obj_or_node:
             return obj_or_node
         
-        # parse while "?." | "." | "[" | "("
+        # parse while "?." | "." | "("
         while self.__chk("?.") or self.__chk(".") or self.__chk("[") or self.__chk("("):
 
             # null check access
@@ -950,6 +950,8 @@ class BrackiesParser(BrackiesTokenizer):
             return self.__p_boolean()
         elif self.__chk(Keywords.KEYW_NULL):
             return self.__p_nulltype()
+        elif self.__chk("["):
+            return self.__p_list()
         
         return None
     
@@ -972,6 +974,50 @@ class BrackiesParser(BrackiesTokenizer):
         return NullTypeNode(
             object = obj
         )
+    
+
+    ######### OTHER TYPE ########
+
+    def __p_list(self):
+
+        # eat opt: "["
+        self.__eat("[")
+
+        _elements = self.list_element()
+
+        # eat opt: "]"
+        self.__eat("]")
+
+        return ListNode(
+            elements = _elements
+        )
+    
+    def list_element(self):
+
+        _elements = []
+
+        _elem0 = self.__p_expression()
+        if  not _elem0:
+            return tuple(_elements)
+        
+        _elements.append(_elem0)
+        
+        while self.__chk(","):
+            # copy
+            _opt = self.__ctokn
+            self.__eat(",")
+
+            _elemN = self.__p_expression()
+            if  not _elemN:
+                # throws error
+                return errorHandler.throw__error(
+                    errorType.SYNTAX_ERROR, "remove symbol \"" + _opt.getSymbol() + "\" or add another element.",
+                    trace__token(_opt)
+                )
+            
+            _elements.append(_elemN)
+
+        return tuple(_elements)
 
     ######### DATATYPES #########
 

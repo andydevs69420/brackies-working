@@ -6,6 +6,7 @@ class OpCode(Enum):
     LOAD_BUILTINS   = "load_builtins"
     NO_OP           = "no_op"
     PUSH_CONST      = "push_const"
+    BUILD_LIST      = "build_list"
     PUSH_NAME       = "push_name"
     PUSH_ATTRIB     = "push_attrib"
     STORE_FUNC      = "store_func"

@@ -3,7 +3,7 @@ from blogger import log__info
 from core.bobject import *
 from btoken import trace__token
 from bsymboltable import SymbolTable
-from core.bcore import println, typeCheck, evaluate
+from core.bcore import println, scan, typeCheck, evaluate, write
 from bbytecode import OpCode, ByteCodeChunk
 from berrhandler import errorHandler, errorType
 class BVirtualMachine:pass
@@ -111,6 +111,8 @@ class BVirtualMachine(GarbageCollector):
             return # directly return
         elif  _opcode == OpCode.PUSH_CONST:
             return push_const(_bytecode)
+        elif  _opcode == OpCode.BUILD_LIST:
+            return build_list(_bytecode)
         elif _opcode == OpCode.PUSH_NAME:
             return push_name(_bytecode)
         elif _opcode == OpCode.PUSH_ATTRIB:
@@ -213,11 +215,24 @@ def estack_get_top():
 def load_builtins(_bytecode:ByteCodeChunk):
     ########## TEMPORARY LOADER ##############
     __x_builtins_x__ = tuple([({
+        "symbol": "write",
+        "param_count": 1,
+        "return_type": BBuiltinObject.Null,
+        "data_type": BBuiltinObject.BuiltinFunc,
+        "points_to": push__to_heap(BuiltinFunc("write", write)),
+    }), ({
         "symbol": "println",
         "param_count": 1,
         "return_type": BBuiltinObject.Null,
         "data_type": BBuiltinObject.BuiltinFunc,
         "points_to": push__to_heap(BuiltinFunc("println", println)),
+    }), 
+        ({
+        "symbol": "scan",
+        "param_count": 1,
+        "return_type": BBuiltinObject.Str,
+        "data_type": BBuiltinObject.BuiltinFunc,
+        "points_to": push__to_heap(BuiltinFunc("scan", scan)),
     })])
 
     for each_builtin in __x_builtins_x__:
@@ -227,6 +242,19 @@ def push_const(_bytecode:ByteCodeChunk):
     push__to_estack(_bytecode.getValueOf("mem_address"))
     # mark as zero ref
     BVirtualMachine.REFERENCE_COUNTER[estack_get_top()] = 0
+
+def build_list(_bytecode:ByteCodeChunk):
+    element_size = _bytecode.getValueOf("length")
+
+    new_list = List()
+
+    for ____ in range(element_size):
+        address = pop__from_estack()
+        actual_obj = get__from_heap(address)
+        new_list.push(actual_obj)
+    
+    list_address = push__to_heap(new_list)
+    push__to_estack(list_address)
 
 def push_name(_bytecode:ByteCodeChunk):
     

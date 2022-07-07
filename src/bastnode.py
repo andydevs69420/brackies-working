@@ -812,3 +812,28 @@ class NullTypeNode(BNode):
         BVirtualMachine.push_instruction(ByteCodeChunk(
             line = self.getLine(), opcode = OpCode.PUSH_CONST, symbol = obj_as_str, mem_address = memory_address
         ))
+
+class ListNode(BNode):
+    def __init__(self, **_attrib):
+        super().__init__(**_attrib)
+        super().validate((
+            # key, instance
+            ("elements", tuple),
+        ))
+    
+    def compile(self):
+        # info
+        log__info("analyzing list...")
+
+        # attrib
+        attributes = self.getAttributes()
+
+        # elements
+        elements = attributes["elements"]
+
+        for itm in elements[::-1]:
+            itm.compile()
+        
+        BVirtualMachine.push_instruction(ByteCodeChunk(
+            line = self.getLine(), opcode = OpCode.BUILD_LIST, length = len(elements)
+        ))

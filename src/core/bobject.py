@@ -212,6 +212,58 @@ class Null(Obj):
     def __str__(self):
         return self.toString().pyData()
 
+class List(Obj):
+    def __init__(self):
+        super().__init__()
+        self.element_type = BBuiltinObject.Null
+        self.elements = []
+
+        self.__add_bound__("push"  , 1, self.push   )
+        self.__add_bound__("pop"   , 0, self.pop    )
+        self.__add_bound__("length", 0, self.length )
+    
+    #bound: [typeString => Str]
+    def typeString(self, _param: FunctionParameter=None):
+        return Str("List_of_"+self.element_type)
+    
+    #bound: [push => Null]
+    def push(self, _another_obj:FunctionParameter=None):
+        _obj = None
+        if  type(_another_obj) == FunctionParameter:
+            _obj = _another_obj.pop()
+        else:
+            _obj = _another_obj
+
+        if  len(self.elements) <= 0:
+            self.element_type = _obj.typeString().pyData()
+        else:
+            if  self.elements[0].typeString().pyData() != _obj.typeString().pyData():return Null(None)
+    
+        self.elements.append(_obj)
+        return Null(None)
+
+    #bound: [pop => Obj]
+    def pop(self, _param: FunctionParameter=None):
+        if len(self.elements) > 0:
+            return self.elements.pop()
+        return Null(None)
+
+    #bound: [pop => Obj]
+    def length(self, _param: FunctionParameter=None):
+        return Int(len(self.elements))
+    
+    #bound: [toString => Str]
+    def toString(self, _param: FunctionParameter = None):
+        _str_rep = ""
+
+        for idx in range(len(self.elements)):
+            _str_rep += self.elements[idx].toString().pyData()
+            if  idx < len(self.elements) - 1:
+                _str_rep += ", "
+        return Str("[" + _str_rep + "]")
+    
+    def __set_element_type__(self, _typeString:str):
+        self.element_type = _typeString
 
 
 
