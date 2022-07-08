@@ -131,6 +131,10 @@ class BVirtualMachine(GarbageCollector):
             return call_expr(_bytecode)
         elif _opcode == OpCode.RETURN:
             return return_opcode(_bytecode)
+        elif _opcode == OpCode.IF_ZERO_NULL_OR_FALSE:
+            return if_zero_null_or_false(_bytecode)
+        elif _opcode == OpCode.JUMP_TO:
+            return jump_to(_bytecode)
         else:
             for _code in BVirtualMachine.INSTRUCTIONS:
                 print(_code.__str__())
@@ -142,6 +146,7 @@ class BVirtualMachine(GarbageCollector):
     def run():
         # for _code in BVirtualMachine.INSTRUCTIONS:
         #     print(_code.__str__())
+        # return
 
         BVirtualMachine.STACK_FRAME.push(BVirtualMachine.INSTRUCTIONS)
 
@@ -157,11 +162,13 @@ class BVirtualMachine(GarbageCollector):
             # BVirtualMachine.STACK_FRAME.pop()
             
             while BVirtualMachine.POINTER < len(current_frame):
+                # print(f"## EXECUTE: {current_frame[BVirtualMachine.POINTER]}")
                 BVirtualMachine.execute_byte(current_frame[BVirtualMachine.POINTER])
                 if BVirtualMachine.STACK_FRAME.isempty() or BVirtualMachine.STACK_FRAME.hasNewFrame():
                     break
-                else:
-                    BVirtualMachine.POINTER += 1
+                
+                # print("STUCK!!", current_frame[BVirtualMachine.POINTER])
+            
             
         log__info("Finished!")
         # for each_remaining in BVirtualMachine.EVAL__STACK:
@@ -204,10 +211,8 @@ def estack_get_top():
 
 
 
-
-
-
-
+def forward_ip(_address):
+    BVirtualMachine.POINTER = _address
 
 
 ############################ START ################################
@@ -236,11 +241,15 @@ def load_builtins(_bytecode:ByteCodeChunk):
 
     for each_builtin in __x_builtins_x__:
         SymbolTable.insert(**each_builtin)
+    
+    forward_ip(BVirtualMachine.POINTER + 1)
 
 def push_const(_bytecode:ByteCodeChunk):
     push__to_estack(_bytecode.getValueOf("mem_address"))
     # mark as zero ref
     BVirtualMachine.REFERENCE_COUNTER[estack_get_top()] = 0
+
+    forward_ip(BVirtualMachine.POINTER + 1)
 
 def build_list(_bytecode:ByteCodeChunk):
     element_size = _bytecode.getValueOf("length")
@@ -254,6 +263,8 @@ def build_list(_bytecode:ByteCodeChunk):
     
     list_address = push__to_heap(new_list)
     push__to_estack(list_address)
+
+    forward_ip(BVirtualMachine.POINTER + 1)
 
 def push_name(_bytecode:ByteCodeChunk):
     
@@ -271,6 +282,8 @@ def push_name(_bytecode:ByteCodeChunk):
     # push to stack
     push__to_estack(obj_pointed_address)
 
+    forward_ip(BVirtualMachine.POINTER + 1)
+
 def push_attrib(_bytecode:ByteCodeChunk):
     top = get__from_heap(pop__from_estack())
 
@@ -284,6 +297,8 @@ def push_attrib(_bytecode:ByteCodeChunk):
     attr_obj = top.__get_bound__(_bytecode.getValueOf("symbol"))
     attr_addr = push__to_heap(attr_obj)
     push__to_estack(attr_addr)
+
+    forward_ip(BVirtualMachine.POINTER + 1)
 
 def store_func(_bytecode:ByteCodeChunk):
     symbol = _bytecode.getValueOf("symbol")
@@ -307,6 +322,8 @@ def store_func(_bytecode:ByteCodeChunk):
     # increase ref count
     BVirtualMachine.increment_count(obj_address)
 
+    forward_ip(BVirtualMachine.POINTER + 1)
+
 def store_name(_bytecode:ByteCodeChunk):
     symbol = _bytecode.getValueOf("symbol")
     
@@ -328,6 +345,10 @@ def store_name(_bytecode:ByteCodeChunk):
 
     # increase ref count
     BVirtualMachine.increment_count(obj_address)
+
+    # print(f"STORED {symbol}!!!")
+
+    forward_ip(BVirtualMachine.POINTER + 1)
 
 def store_local(_bytecode:ByteCodeChunk):
     symbol = _bytecode.getValueOf("symbol")
@@ -351,6 +372,10 @@ def store_local(_bytecode:ByteCodeChunk):
     # increase ref count
     BVirtualMachine.increment_count(obj_address)
 
+    print(f"STORED: {symbol}, value = {get__from_heap(obj_address)}")
+
+    forward_ip(BVirtualMachine.POINTER + 1)
+
 
 def binary_expr(_bytecode:ByteCodeChunk):
    
@@ -371,8 +396,11 @@ def binary_expr(_bytecode:ByteCodeChunk):
     object_address = push__to_heap(new_obj)
     push__to_estack(object_address)
 
+    forward_ip(BVirtualMachine.POINTER + 1)
+
 def pop_top(_bytecode:ByteCodeChunk):
     pop__from_estack()
+    forward_ip(BVirtualMachine.POINTER + 1)
 
 def call_expr(_bytecode:ByteCodeChunk):
 
@@ -393,6 +421,7 @@ def call_expr(_bytecode:ByteCodeChunk):
 
     ############# BUILTIN CALL ##################
     if  _must_be_callable.typeString().pyData() == BBuiltinObject.BuiltinFunc:
+        forward_ip(BVirtualMachine.POINTER + 1)
         symbol_prop = SymbolTable.lookup(func_name.pyData())
         builtin = _must_be_callable
         
@@ -413,6 +442,7 @@ def call_expr(_bytecode:ByteCodeChunk):
 
     ############# BOUND CALL ####################
     if  _must_be_callable.typeString().pyData() == BBuiltinObject.BoundMethod:
+        forward_ip(BVirtualMachine.POINTER + 1)
         bound = _must_be_callable
         if  bound.paramc != call_args_count:
             # throws error
@@ -462,11 +492,14 @@ def call_expr(_bytecode:ByteCodeChunk):
     # record last pointer
     # add 1 to skip function call
     BVirtualMachine.CONTROLL_HISTORY.append(BVirtualMachine.POINTER + 1)
-    BVirtualMachine.POINTER = 0
+    forward_ip(0)
 
 def return_opcode(_bytecode:ByteCodeChunk):
+    # print("EVAL: ", BVirtualMachine.EVAL__STACK)
+    # print(BVirtualMachine.get_from_heap(BVirtualMachine.EVAL__STACK[-1]))
     BVirtualMachine.STACK_FRAME.pop()
-    BVirtualMachine.POINTER = BVirtualMachine.CONTROLL_HISTORY.pop()
+    forward_ip(BVirtualMachine.CONTROLL_HISTORY.pop())
+    # print(f"RESTORED AT: {BVirtualMachine.POINTER * 2}")
 
     # return if source file!
     if  len(BVirtualMachine.NAMED_CALL_STACK) <= 0:
@@ -489,3 +522,23 @@ def return_opcode(_bytecode:ByteCodeChunk):
             errorType.TYPE_ERROR, func_name + "(...) expected return type is \"" + func_prop["return_type"] + "\", but returned \"" + actual_return.typeString().pyData() + "\".",
             trace__token(func_prop["token"])
         )
+    
+
+def if_zero_null_or_false(_bytecode:ByteCodeChunk):
+    
+    top = get__from_heap(pop__from_estack())
+    jump_loc = _bytecode.getValueOf("jump_loc")
+
+    if  not top.pyData():
+        forward_ip((jump_loc//2))
+    else:
+        forward_ip(BVirtualMachine.POINTER + 1)
+    # print(_bytecode)
+    # print(f"JUMPING TO", BVirtualMachine.INSTRUCTIONS[BVirtualMachine.POINTER])
+    # exit(1)
+    
+def jump_to(_bytecode:ByteCodeChunk):
+    jump_loc = _bytecode.getValueOf("jump_loc")
+    forward_ip((jump_loc//2))
+    
+

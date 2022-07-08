@@ -88,7 +88,97 @@ class SourceCodeNode(BNode):
 
         # end of scope
         SymbolTable.end_scope()
+
+class IfNode(BNode):
+    def __init__(self, **_attrib):
+        super().__init__(**_attrib)
+        super().validate((
+            # key, instance
+            ("condition", BNode),
+            ("statement", BNode),
+        ))
+    
+    def compile(self):
+        # info
+        log__info("analyzing if statement...")
+
+        # attrib
+        attributes = self.getAttributes()
+
+        # condition
+        attributes["condition"].compile()
+
+        BVirtualMachine.INSTRUCTIONS.append(None)
+        current_line = self.getLine()
+        byte_address = (len(BVirtualMachine.INSTRUCTIONS) - 1)
+
+        # statement
+        attributes["statement"].compile()
+
+        # 
+        BVirtualMachine.INSTRUCTIONS[byte_address] = ByteCodeChunk(
+            line = current_line, opcode = OpCode.IF_ZERO_NULL_OR_FALSE, jump_loc = self.LINE + 2
+        )
+
+        # jump location 0
+        BVirtualMachine.push_instruction(ByteCodeChunk(
+            line = self.getLine(), opcode = OpCode.JUMP_TO, jump_loc = self.LINE
+        ))
         
+class IfElseNode(IfNode):
+    def __init__(self, **_attrib):
+        super().__init__(**_attrib)
+        super().validate((
+            # key, instance
+            ("condition"     , BNode),
+            ("statement"     , BNode),
+            ("else_statement", BNode),
+        ))
+    
+    def compile(self):
+        # info
+        log__info("analyzing if else...")
+
+        # attrib
+        attributes = self.getAttributes()
+
+        # condition
+        attributes["condition"].compile()
+
+        BVirtualMachine.INSTRUCTIONS.append(None)
+        _0current_line = self.getLine()
+        _0byte_address = (len(BVirtualMachine.INSTRUCTIONS) - 1)
+
+        # statement
+        attributes["statement"].compile()
+        # jump to end if
+        BVirtualMachine.INSTRUCTIONS.append(None)
+        _1current_line = self.getLine()
+        _1byte_address = (len(BVirtualMachine.INSTRUCTIONS) - 1)
+      
+        # else line
+        attributes["else_statement"].compile()
+        # jump to end if
+        BVirtualMachine.INSTRUCTIONS.append(None)
+        _2current_line = self.getLine()
+        _2byte_address = (len(BVirtualMachine.INSTRUCTIONS) - 1)
+
+
+        # assign jump location on if statement
+        # current jump 0
+        BVirtualMachine.INSTRUCTIONS[_0byte_address] = ByteCodeChunk(
+            line = _0current_line, opcode = OpCode.IF_ZERO_NULL_OR_FALSE, jump_loc = _1current_line + 2
+        )
+
+        # current jump 1
+        BVirtualMachine.INSTRUCTIONS[_1byte_address] = ByteCodeChunk(
+            line = _1current_line, opcode = OpCode.JUMP_TO, jump_loc = self.LINE
+        )
+
+        # current jump 1
+        BVirtualMachine.INSTRUCTIONS[_2byte_address] = ByteCodeChunk(
+            line = _2current_line, opcode = OpCode.JUMP_TO, jump_loc = self.LINE
+        )
     
 class NoOpNode(BNode):
     def __init__(self, **_attrib):
@@ -715,7 +805,7 @@ class ReturnNode(BNode):
 
         # return
         BVirtualMachine.push_instruction(ByteCodeChunk(
-            line = self.getLine(), opcode = OpCode.RETURN
+            line = self.getLine(), opcode = OpCode.RETURN,
         ))
 
 ############# OBJECT ###################

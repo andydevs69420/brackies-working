@@ -164,15 +164,13 @@ class Str(Obj):
     def pyData(self):
         return self.host_data
     
-
     #bound: [equals => Bool]
-    def equals(self, _str_other:FunctionParameter):
-        if  type(_str_other.top()) != Str:return Bool(False)
+    def equals(self, _str_other:FunctionParameter=None):
         return Bool(self.host_data == _str_other.pop().pyData())
 
     #bound: [concat => Str]
-    def concat(self, _str_other:FunctionParameter):
-        if  type(_str_other.top()) != Str:return Bool(False)
+    def concat(self, _str_other:FunctionParameter=None):
+        if  type(_str_other.top()) != Str:return Null(None)
         return Str(self.host_data + _str_other.pop().pyData())
 
     #bound: [toString => Str]
@@ -330,10 +328,10 @@ class BrackiesCode(Obj):
         for i in self.instructions:
             string += i.__str__()
             if index < len(self.instructions) - 1:
-                string += ", "
+                string += ",\n"
             index += 1
 
-        return Str("[" + string + "]")
+        return Str("[\n" + string + "\n]")
 
 class Func(Obj):
     def __init__(self, _name:str, _bytecode:BrackiesCode):

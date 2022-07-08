@@ -17,6 +17,9 @@ class OpCode(Enum):
     CALL            = "call"
     RETURN          = "return"
 
+    IF_ZERO_NULL_OR_FALSE = "if_zero_null_or_false"
+    JUMP_TO         = "jump_to"
+
 
 class ByteCodeChunk:
     def __init__(self, **_atrtib):

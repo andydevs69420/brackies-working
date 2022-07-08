@@ -1,29 +1,16 @@
 
 
-function add:Null(a:Int, b:Int) {
+function add:Int(x:Int) {
 
-    println("Multiplied: ".concat(multiply(a,b).toString()));
-    return println(a+b);
+    println("X is ".concat(x.toString()));
+    if (x >= 1)
+        return x * add(x - 1);
+    else
+     return 1;
 
 }
 
-function multiply:Int(_a:Int, _b:Int) {
-    return _a * _b;
-}
 
-var lst:List[Int] = [0];
-println(lst);
 
-lst.push(1);
-lst.push(2);
-lst.push(3);
-
-println(lst);
-lst.pop();
-println(lst);
-
-write(2);
-write(2);
-write(2);
-println(2);
-
+var x:Int = add(0);
+println(x);

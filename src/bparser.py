@@ -14,6 +14,8 @@ class Keywords:
     KEYW_CONST    = "const"
     KEYW_LET      = "let"
     KEYW_RETURN   = "return"
+    KEYW_IF       = "if"
+    KEYW_ELSE     = "else"
 
     ###### ========== ######
 
@@ -147,6 +149,9 @@ class BrackiesParser(BrackiesTokenizer):
         # class dec
         elif self.__chk(Keywords.KEYW_FUNCTION):
             return self.__p_function_dec()
+        ################# COMPOUND  ####################
+        elif self.__chk(Keywords.KEYW_IF):
+            return self.__p_if_stmnt()
         ################################################
         elif self.__chk(Keywords.KEYW_RETURN):
             return self.__p_return()
@@ -352,6 +357,41 @@ class BrackiesParser(BrackiesTokenizer):
 
         # list of member
         return tuple(_class_member)
+    ############### COMPOUND ################
+    def __p_if_stmnt(self):
+
+        # eat keyw: "if"
+        self.__eat(Keywords.KEYW_IF)
+        
+        # eat opt: "("
+        self.__eat("(")
+
+        _condition = self.__p_expression()
+
+        # eat opt: ")"
+        self.__eat(")")
+
+        _statement = self.__p_statement()
+
+        if  not self.__chk(Keywords.KEYW_ELSE):
+            # returnh if node
+            return IfNode(
+                condition = _condition,
+                statement = _statement
+            )
+
+        # eat keyw: "else"
+        self.__eat(Keywords.KEYW_ELSE)
+        
+        _else_statement = self.__p_statement()
+        
+        # return if else node
+        return IfElseNode(
+            condition = _condition,
+            statement = _statement,
+            else_statement = _else_statement
+        )
+
     
     ###### RETURN STATEMENT     #####
     def __p_return(self):
@@ -787,8 +827,7 @@ class BrackiesParser(BrackiesTokenizer):
         if  (
             self.__chk( "~"  ) or self.__chk( "!"   ) or 
             self.__chk( "+"  ) or self.__chk( "-"   ) or 
-            self.__chk( "++" ) or self.__chk( "--"  ) or 
-            self.__chk("type") or self.__chk( "del" )
+            self.__chk( "++" ) or self.__chk( "--"  )
         ):
             # eat opt: "~" | "!" | "+" | "-" | "++" | "--"
             _opt = self.__ctokn
