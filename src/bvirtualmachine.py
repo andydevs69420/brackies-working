@@ -117,7 +117,8 @@ class BVirtualMachine(GarbageCollector):
         if  _opcode == OpCode.LOAD_BUILTINS:
             return load_builtins(_opcode)
         elif _opcode == OpCode.NO_OP:
-            return # directly return
+            BVirtualMachine.POINTER += 1
+            return
         elif  _opcode == OpCode.PUSH_CONST:
             return push_const(_bytecode)
         elif  _opcode == OpCode.BUILD_LIST:
@@ -338,7 +339,7 @@ def store_func(_bytecode:ByteCodeChunk):
     function = SymbolTable.lookup(symbol)
     datatype = (obj.typeString().pyData())
 
-    if  function["data_type"] != datatype and not (function["data_type"] == BBuiltinObject.Any and datatype in BRACKIES_TYPE):
+    if  function["data_type"] != datatype and not (function["data_type"] == BBuiltinObject.Any and (datatype in BRACKIES_TYPE or datatype.startswith("List_of_"))):
         # throws error
         return errorHandler.throw__error(
             errorType.TYPE_ERROR, "\"" + symbol + "\" is declaired as \"" + function["data_type"] + "\", got \"" + datatype + "\".",
@@ -363,7 +364,7 @@ def store_name(_bytecode:ByteCodeChunk):
     global_v = SymbolTable.lookup(symbol)
     datatype = (obj.typeString().pyData())
 
-    if  global_v["data_type"] != datatype and not (global_v["data_type"] == BBuiltinObject.Any and datatype in BRACKIES_TYPE):
+    if  global_v["data_type"] != datatype and not (global_v["data_type"] == BBuiltinObject.Any and (datatype in BRACKIES_TYPE or datatype.startswith("List_of_"))):
         # throws error
         return errorHandler.throw__error(
             errorType.TYPE_ERROR, "\"" + symbol + "\" is declaired as \"" + global_v["data_type"] + "\", got \"" + datatype + "\".",
@@ -388,7 +389,7 @@ def store_local(_bytecode:ByteCodeChunk):
     localvar = SymbolTable.lookup(symbol)
     datatype = (obj.typeString().pyData())
 
-    if  localvar["data_type"] != datatype and not (global_v["data_type"] == BBuiltinObject.Any and datatype in BRACKIES_TYPE):
+    if  localvar["data_type"] != datatype and not (localvar["data_type"] == BBuiltinObject.Any and (datatype in BRACKIES_TYPE or datatype.startswith("List_of_"))):
         # throws error
         return errorHandler.throw__error(
             errorType.TYPE_ERROR, "\"" + symbol + "\" is declaired as \"" + localvar["data_type"] + "\", got \"" + datatype + "\".",
@@ -539,7 +540,7 @@ def return_opcode(_bytecode:ByteCodeChunk):
 
     actual_return = BVirtualMachine.EVAL__STACK[-1] # top
 
-    if  func_prop["return_type"] != actual_return.typeString().pyData():
+    if  func_prop["return_type"] != actual_return.typeString().pyData() and not (func_prop["return_type"] == BBuiltinObject.Any and (actual_return.typeString().pyData() in BRACKIES_TYPE or actual_return.typeString().pyData().startswith("List_of_"))):
         # throws error
         return errorHandler.throw__error(
             errorType.TYPE_ERROR, func_name + "(...) expected return type is \"" + func_prop["return_type"] + "\", but returned \"" + actual_return.typeString().pyData() + "\".",

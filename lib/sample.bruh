@@ -1,17 +1,13 @@
 
+function factorial:Int(_n:Int) {
 
-var x:List[Int] = [1,2,3];
+    if (_n <= 1) return 1;
 
-println(x.pop());
-println(x.pop());
-println(x.pop());
-println(x.push(2 + 2));
+    return _n * factorial(_n - 1);
+}
 
-println("List X length: ".concat(x.length().toString()));
-
-println("Hola!!!!");
-
-var y:Any = readFile("lib/sample.bruhxxx");
-
-println(y.length());
+var fact:Any = factorial(5);
+write("Factorial of 5 is ");;;;;;;  println(fact);
+println("Type of fact: ".concat(fact.type().toString()));
+println(factorial);
 
