@@ -11,6 +11,7 @@ from btoken import BTokenType, BToken, trace__token
 class BNode(object):
 
     LINE = 0
+    LOCALS = 0
     @staticmethod
     def getLine():
         BNode.LINE += 2
@@ -76,9 +77,8 @@ class SourceCodeNode(BNode):
             each_attrib.compile()
 
         ############## make default return ##################
-        memory_address = BVirtualMachine.push_to_heap(Null(None))
         BVirtualMachine.push_instruction(ByteCodeChunk(
-            line = self.getLine(), opcode = OpCode.PUSH_CONST, symbol = "null", mem_address = memory_address
+            line = self.getLine(), opcode = OpCode.PUSH_CONST, symbol = "null", bobject = Null(None)
         ))
         # return
         BVirtualMachine.push_instruction(ByteCodeChunk(
@@ -434,6 +434,39 @@ class ReferenceNode(BNode):
             line = self.getLine(), opcode = OpCode.PUSH_NAME, symbol = ref_as_str, raw = referenceL, self_address = self_add
         ))
 
+class ReferenceLocalNode(BNode):
+    def __init__(self, **_attrib):
+        super().__init__(**_attrib)
+        super().validate((
+            # key, instance
+            ("reference", BToken),
+        ))
+    
+    def compile(self):
+        # info
+        log__info("analyzing reference...")
+
+        # attrib
+        attributes = self.getAttributes()
+
+        # ref
+        referenceL = attributes["reference"]
+        ref_as_str = referenceL.getSymbol()
+
+        prop = SymbolTable.lookup(ref_as_str)
+        self_add = 0
+        if  prop:
+            self_add = prop["index"]
+        
+        _opcode = OpCode.PUSH_LOCAL
+        
+        if  not SymbolTable.CURR.existL(ref_as_str):
+            _opcode = OpCode.PUSH_NAME
+        
+        BVirtualMachine.push_instruction(ByteCodeChunk(
+            line = self.getLine(), opcode = _opcode, symbol = ref_as_str, raw = referenceL, self_address = self_add
+        ))
+
 
 ############# OBJECT ###################
 class TypeNode(BNode):
@@ -455,7 +488,7 @@ class TypeNode(BNode):
         bdata_type = attributes["type"]
         string_rep = bdata_type.getSymbol()
 
-        if  string_rep in BRACKIES_TYPE and string_rep not in (BBuiltinObject.List, BBuiltinObject.Dict):
+        if  string_rep in BRACKIES_TYPE and string_rep != BBuiltinObject.List:
             return string_rep
 
         if  string_rep in (BBuiltinObject.List, BBuiltinObject.Dict):
@@ -477,8 +510,8 @@ class ExtendedTypeNode(TypeNode):
         super().__init__(**_attrib)
         super().validate((
             # key, instance
-            ("type"    , BToken),
-            ("internal", tuple ),
+            ("type"    , BToken   ),
+            ("internal", TypeNode ),
         ))
 
     def compile(self):
@@ -498,36 +531,16 @@ class ExtendedTypeNode(TypeNode):
         # final type
         final_type = ""
 
-        if  string_rep not in (BBuiltinObject.List, BBuiltinObject.Dict):
+        if  string_rep != BBuiltinObject.List:
             # throws error
             return errorHandler.throw__error(
-                errorType.NAME_ERROR, "\"" + string_rep + "\" does not needs internal type(s)!",
+                errorType.NAME_ERROR, "\"" + string_rep + "\" doesn't needs internal type(s)!",
                 trace__token(bdata_type)
             )
         
         final_type += string_rep
-
-        if  string_rep == BBuiltinObject.List:
-            if  len(internal_type) != 1:
-                # throws error
-                return errorHandler.throw__error(
-                    errorType.NAME_ERROR, "\"" + string_rep + "\" must contains atleast 1 internal type!",
-                    trace__token(bdata_type)
-                )
-        else:
-            if  len(internal_type) != 2:
-                # throws error
-                return errorHandler.throw__error(
-                    errorType.NAME_ERROR, "\"" + string_rep + "\" must contains atleast 2 internal type!",
-                    trace__token(bdata_type)
-                )
         
-        if  len(internal_type) == 1:
-            final_type += "_of_" + internal_type[0].compile()
-        else:
-            # dict
-            final_type += "ionary" if (final_type + "ionary") == "Dictionary" else ""
-            final_type += "_with a_key_type_of_" + internal_type[0].compile() + "_and_a_value_type_of_" + internal_type[1].compile()
+        final_type += "_of_" + internal_type.compile()
 
         return final_type
 
@@ -684,9 +697,8 @@ class FunctionNode(BNode):
             each_node.compile()
         
         ############## make default return ##################
-        memory_address = BVirtualMachine.push_to_heap(Null(None))
         BVirtualMachine.push_instruction(ByteCodeChunk(
-            line = self.getLine(), opcode = OpCode.PUSH_CONST, symbol = "null", mem_address = memory_address
+            line = self.getLine(), opcode = OpCode.PUSH_CONST, symbol = "null", bobject = Null(None)
         ))
         # return
         BVirtualMachine.push_instruction(ByteCodeChunk(
@@ -721,10 +733,9 @@ class FunctionNode(BNode):
 
         ############## STORE FUNCTION ##############
         func_obj = Func(func_name_as_str, BrackiesCode(_function_code))
-        f_memory_address = BVirtualMachine.push_to_heap(func_obj)
 
         BVirtualMachine.push_instruction(ByteCodeChunk(
-            line = self.getLine(), opcode = OpCode.PUSH_CONST, symbol = func_obj.toString().pyData(), mem_address = f_memory_address
+            line = self.getLine(), opcode = OpCode.PUSH_CONST, symbol = func_obj.toString().pyData(), bobject = func_obj
         ))
 
         ######### STORE FUNCTION ##############
@@ -845,10 +856,10 @@ class SingleObjectNode(BNode):
 
         evaluator = _lazy_eval[raw_object.getType()]
         realDtype = { Int: int, Flt: float, Str: str }
-        memory_address = BVirtualMachine.push_to_heap(evaluator(self.convertTo(realDtype[evaluator], obj_as_str)))
+        obj = evaluator(self.convertTo(realDtype[evaluator], obj_as_str))
 
         BVirtualMachine.push_instruction(ByteCodeChunk(
-            line = self.getLine(), opcode = OpCode.PUSH_CONST, symbol = obj_as_str, mem_address = memory_address
+            line = self.getLine(), opcode = OpCode.PUSH_CONST, symbol = obj_as_str, bobject = obj
         ))
 
 
@@ -871,10 +882,8 @@ class BooleanNode(BNode):
         raw_object = attributes["object"]
         obj_as_str = raw_object.getSymbol()
 
-        memory_address = BVirtualMachine.push_to_heap(Bool(True if obj_as_str == "true" else False))
-
         BVirtualMachine.push_instruction(ByteCodeChunk(
-            line = self.getLine(), opcode = OpCode.PUSH_CONST, symbol = obj_as_str, mem_address = memory_address
+            line = self.getLine(), opcode = OpCode.PUSH_CONST, symbol = obj_as_str, bobject = Bool(True if obj_as_str == "true" else False)
         ))
         
         
@@ -897,10 +906,8 @@ class NullTypeNode(BNode):
         raw_object = attributes["object"]
         obj_as_str = raw_object.getSymbol()
 
-        memory_address = BVirtualMachine.push_to_heap(Null(None))
-
         BVirtualMachine.push_instruction(ByteCodeChunk(
-            line = self.getLine(), opcode = OpCode.PUSH_CONST, symbol = obj_as_str, mem_address = memory_address
+            line = self.getLine(), opcode = OpCode.PUSH_CONST, symbol = obj_as_str, bobject = Null(None)
         ))
 
 class ListNode(BNode):

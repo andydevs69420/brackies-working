@@ -1,4 +1,3 @@
-from ast import operator
 from bastnode import *
 from blexer import BrackiesTokenizer
 from btoken import BTokenType, trace__token
@@ -1083,8 +1082,16 @@ class BrackiesParser(BrackiesTokenizer):
         obj = self.__ctokn
         # eat type: "IDN"
         self.__eat(BTokenType.IDN)
-        # return new single obj node
-        return ReferenceNode(
+
+
+        if not self.__ctxh.is_ctx(ContextHelper.CTX_FUNCTION):
+            # return reference 
+            return ReferenceNode(
+                reference = obj
+            )
+        
+        # return local ref
+        return ReferenceLocalNode(
             reference = obj
         )
 
@@ -1146,24 +1153,14 @@ class BrackiesParser(BrackiesTokenizer):
         self.__eat("[")
 
         _internal_type = self.__p_brackies_type()
-        
-        _internal_type_value = None
-
-        if self.__chk(":"):
-
-            # eat opt: ":"
-            self.__eat(":")
-
-            # value type
-            _internal_type_value = self.__p_brackies_type()
-
+    
         # eat opt: "]"
         self.__eat("]")
 
         # return extended type
         return ExtendedTypeNode(
             type     = _type,
-            internal = tuple([_internal_type]) if _internal_type_value == None else (_internal_type, _internal_type_value)
+            internal = _internal_type
         )
     
     

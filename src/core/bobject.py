@@ -4,6 +4,7 @@ from berrhandler import errorHandler, errorType
 
 
 class BBuiltinObject:
+    Any  = "Any"
     Obj  = "Obj"
     Type = "Type"
     Num  = "Num"
@@ -13,13 +14,13 @@ class BBuiltinObject:
     Bool = "Bool"
     Null = "Null"
     List = "List"
-    Dict = "Dict"
     BuiltinFunc  = "BuiltinFunc"
     BoundMethod  = "BoundMethod"
     BrackiesCode = "BrackiesCode"
     Func = "Func"
 
 __ALL__ = [ 
+    BBuiltinObject.Any,
     BBuiltinObject.Obj,
     BBuiltinObject.Type,
     BBuiltinObject.Num,
@@ -29,7 +30,6 @@ __ALL__ = [
     BBuiltinObject.Bool,
     BBuiltinObject.Null,
     BBuiltinObject.List,
-    BBuiltinObject.Dict,
     BBuiltinObject.BuiltinFunc,
     BBuiltinObject.BoundMethod,
     BBuiltinObject.BrackiesCode,
@@ -47,8 +47,7 @@ class Flt:pass
 class Str:pass
 class Bool:pass
 class Null:pass
-class LIST:pass #TODO: implement
-class DICT:pass #TODO: implement
+class LIST:pass
 class FUNC:pass
 class BuiltinFunc:pass
 class BoundMethod:pass
@@ -160,18 +159,24 @@ class Str(Obj):
         self.host_data = _str
         self.__add_bound__("equals", 1, self.equals)
         self.__add_bound__("concat", 1, self.concat)
+        self.__add_bound__("length", 0, self.length)
     
     def pyData(self):
         return self.host_data
     
     #bound: [equals => Bool]
     def equals(self, _str_other:FunctionParameter=None):
+        if  type(_str_other.top()) != Str:return Null(None)
         return Bool(self.host_data == _str_other.pop().pyData())
 
     #bound: [concat => Str]
     def concat(self, _str_other:FunctionParameter=None):
         if  type(_str_other.top()) != Str:return Null(None)
         return Str(self.host_data + _str_other.pop().pyData())
+    
+    #bound: [length => Int]
+    def length(self, _str_other:FunctionParameter=None):
+        return Int(len(self.host_data))
 
     #bound: [toString => Str]
     def toString(self, _param:FunctionParameter=None):

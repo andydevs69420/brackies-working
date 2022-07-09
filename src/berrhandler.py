@@ -2,6 +2,7 @@ from enum import Enum
 from blogger import log__error
 
 class errorType(Enum):
+    BRACKIES_ERROR   = 0x00
     SYNTAX_ERROR     = 0x01
     SEMANTIC_ERROR   = 0x02
     NAME_ERROR       = 0x03

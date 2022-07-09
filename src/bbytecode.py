@@ -8,6 +8,7 @@ class OpCode(Enum):
     PUSH_CONST      = "push_const"
     BUILD_LIST      = "build_list"
     PUSH_NAME       = "push_name"
+    PUSH_LOCAL      = "push_local"
     PUSH_ATTRIB     = "push_attrib"
     STORE_FUNC      = "store_func"
     STORE_NAME      = "store_name"

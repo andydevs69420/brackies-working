@@ -104,3 +104,10 @@ def write(_object:FunctionParameter):
 def println(_object:FunctionParameter):
     print(_object.pop().toString().pyData())
     return Null(None)
+
+def readFile(_object:FunctionParameter):
+    _path = _object.pop().toString().pyData()
+    try:
+        return Str(open(_path, "r").read())
+    except FileNotFoundError:
+        return Null(None)
