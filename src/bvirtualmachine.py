@@ -338,7 +338,7 @@ def store_func(_bytecode:ByteCodeChunk):
     function = SymbolTable.lookup(symbol)
     datatype = (obj.typeString().pyData())
 
-    if  function["data_type"] != datatype and not (global_v["data_type"] == BBuiltinObject.Any and datatype in BRACKIES_TYPE):
+    if  function["data_type"] != datatype and not (function["data_type"] == BBuiltinObject.Any and datatype in BRACKIES_TYPE):
         # throws error
         return errorHandler.throw__error(
             errorType.TYPE_ERROR, "\"" + symbol + "\" is declaired as \"" + function["data_type"] + "\", got \"" + datatype + "\".",
