@@ -1,5 +1,6 @@
 from enum import Enum
 from berrhandler import errorType, errorHandler
+from btoken import BToken
 
 
 class OpCode(Enum):
@@ -69,11 +70,16 @@ class ByteCodeChunk:
         _separator = " -- "
         for k, v in zip(self.__attrib.keys(), self.__attrib.values()):
             if  k not in [req_key[0] for req_key in self.__required ]:
-                _not_required += v.__str__()
+
+                
+                if type(v) == BToken:
+                    _not_required += v.getSymbol()
+                else:
+                    _not_required += v.__str__()
                 _not_required += _separator
         
         if  _not_required.endswith(_separator):
             _not_required = _not_required[: len(_not_required) - len(_separator)]
 
-        return type(self).__name__ + "(" + "[" + str(self.__attrib["line"]) + "]" + _separator + self.__attrib["opcode"].name + _separator + _not_required + ")"
+        return "[" + str(self.__attrib["line"]) + "]" + _separator + self.__attrib["opcode"].name + _separator + _not_required
 

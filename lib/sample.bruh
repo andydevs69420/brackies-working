@@ -11,3 +11,4 @@ write("Factorial of 5 is ");;;;;;;  println(fact);
 println("Type of fact: ".concat(fact.type().toString()));
 println(factorial);
 
+println(factorial.getByteCode());
