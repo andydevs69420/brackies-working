@@ -26,8 +26,6 @@ if  not __FILE_INPUT__[0].endswith(__FILEFORMAT__):
     )
 
 from bparser import BrackiesMain
-from bsymboltable import SymbolTable
-from bvirtualmachine import BVirtualMachine
 
 
 if __name__ == "__main__":
@@ -38,5 +36,3 @@ if __name__ == "__main__":
     abstree = brackie.parse(fileptr.name, fileptr.read())
     for node in abstree:
         node.compile()
-    
-    BVirtualMachine.run()

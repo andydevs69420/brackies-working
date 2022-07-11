@@ -1,4 +1,14 @@
 
+interface class Global {
 
+    function println(_obj:Str);
+
+}
+
+interface class Int extends Obj {
+
+    function toString:Str();
+
+}
 
 

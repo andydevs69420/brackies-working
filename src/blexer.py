@@ -481,7 +481,7 @@ class BrackiesTokenizer(Brackies):
             # error
             return errorHandler.throw__error(
                 errorType.SYNTAX_ERROR, "these symbol(s) was never closed!",
-                trace__token(self.__path, self.__cont, _chunk)
+                _chunk
             )
 
         # record pos
