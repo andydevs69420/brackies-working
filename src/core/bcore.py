@@ -1,5 +1,4 @@
 from core.bobject import *
-from sys import stdin
 
 def typeCheck(_opt:str, _lhs:any, _rhs:any):
         # supported type
@@ -21,13 +20,6 @@ def typeCheck(_opt:str, _lhs:any, _rhs:any):
 
 def evaluate(_opt:str, _lhs:int or float, _rhs:int or float):
     _type = None
-    # # determine type
-    # if   type(_lhs) == int and type(_rhs):
-    #     _type = Int
-    # elif type(_lhs) in (int, float) or type(_rhs) in (int, float):
-    #     _type = Flt
-    # elif type(_lhs) == bool and type(_rhs) == bool:
-    #     _type =  Bool
     
     #############################################
     _new_type = tuple([
@@ -91,8 +83,6 @@ def evaluate(_opt:str, _lhs:int or float, _rhs:int or float):
         return _type(_lhs and _rhs)
     elif _opt == "||":
         return _type(_lhs or _rhs )
-
-
 
 def scan(_object:FunctionParameter):
     return Str(input(_object.pop().toString().pyData()))

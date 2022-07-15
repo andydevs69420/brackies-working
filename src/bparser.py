@@ -1,48 +1,9 @@
-from distutils.log import error
 from bastnode import *
+from bkeywords import Keywords
 from blexer import BrackiesTokenizer
 from btoken import BTokenType, trace__token
 from berrhandler import errorType, errorHandler
 
-
-class Keywords:
-    
-    KEYW_CLASS     = "class"
-    KEYW_PUBLIC    = "public"
-    KEYW_PRIVATE   = "private"
-    KEYW_PROTECTED = "protected"
-    KEYW_STATIC    = "static"
-    KEYW_WITH      = "with"
-    KEYW_FUNCTION  = "function"
-    KEYW_VAR       = "var"
-    KEYW_CONST     = "const"
-    KEYW_LET       = "let"
-    KEYW_RETURN    = "return"
-    KEYW_IF        = "if"
-    KEYW_ELSE      = "else"
-    KEYW_SWITCH    = "switch"
-    KEYW_CASE      = "case"
-    KEYW_DEFAULT   = "default"
-    KEYW_DO        = "do"
-    KEYW_WHILE     = "while"
-    KEYW_FOR       = "for"
-
-    ###### ========== ######
-
-    KEYW_TRUE  = "true"
-    KEYW_FALSE = "false"
-    KEYW_NULL  = "null"
-
-
-    @staticmethod
-    def isKeyword(_token:BToken):
-        _attribs = Keywords.__dict__
-        _keyword = [
-            v
-            for k, v in zip(_attribs.keys(), _attribs.values())
-            if  k.startswith("KEYW")
-        ]
-        return (_token.getSymbol() in _keyword)
 
 
 class ContextHelper(object):
@@ -178,6 +139,8 @@ class BrackiesParser(BrackiesTokenizer):
         elif self.__chk(Keywords.KEYW_SWITCH):
             return self.__p_switch_stmnt()
         # iteration
+        elif self.__chk(Keywords.KEYW_DO):
+            return self.__p_do_while_stmnt()
         elif self.__chk(Keywords.KEYW_WHILE):
             return self.__p_while_stmnt()
         elif self.__chk(Keywords.KEYW_FOR):
@@ -185,9 +148,14 @@ class BrackiesParser(BrackiesTokenizer):
         elif self.__chk(BTokenType.OPT) and self.__chk("{"):
             return self.__p_block()
         ################################################
+        elif self.__chk(Keywords.KEYW_CONTINUE):
+            return self.__p_continue()
+        elif self.__chk(Keywords.KEYW_BREAK):
+            return self.__p_break()
+        elif self.__chk(Keywords.KEYW_YIELD):
+            return self.__p_yield()
         elif self.__chk(Keywords.KEYW_RETURN):
             return self.__p_return()
-        ################# ITERATION ####################
         # expr
         return self.__p_expresion_statement()
     
@@ -430,7 +398,15 @@ class BrackiesParser(BrackiesTokenizer):
                 prop = self.other_accessibility()
             )
         
-        return self.other_accessibility()
+        _prop = self.other_accessibility()
+        if  not _prop:
+            return _prop
+
+        # default is public
+        return AccessModNode(
+            access_modifier = AccessModifier.PUBLIC,
+            prop = _prop
+        )
     
     def other_accessibility(self):
 
@@ -444,7 +420,7 @@ class BrackiesParser(BrackiesTokenizer):
     def allowed_in_class(self):
 
         if  Keywords.isKeyword(self.__ctokn) and self.__chk(Keywords.KEYW_FUNCTION):
-            return self.__p_function_dec()
+            return self.class_function_dec()
         elif self.__chk(BTokenType.IDN):
             return self.class_var()
         
@@ -523,10 +499,43 @@ class BrackiesParser(BrackiesTokenizer):
         # return pair
         return (_var_and_type, _expr)
     
+    def class_function_dec(self):
+        # push new context
+        self.__ctxh.push_ctx(ContextHelper.CTX_FUNCTION)
+
+        # eat keyw: "function"
+        self.__eat(Keywords.KEYW_FUNCTION)
+
+        # function name
+        _func_name = self.__p_identifier_non_ref()
+
+        # eat opt: ":"
+        self.__eat(":")
+
+        # type
+        _return_type = self.__p_brackies_type()
+
+        # params
+        _params = self.func_param_list()
+
+        # funcbody 
+        _func_body = self.func_body()
+
+        # pop context
+        self.__ctxh.pop_ctx()
+
+        # return function
+        return ClassFunctionNode(
+            func_name   = _func_name  ,
+            return_type = _return_type,
+            parameters  = _params     ,
+            func_body   = _func_body  ,
+        )
+    
     ###### FUNCTION DEC ######
     def __p_function_dec(self):
         # function dec is only in global context
-        if  not (self.__ctxh.is_ctx_restrict(ContextHelper.CTX_GLOBAL) or self.__ctxh.is_ctx_restrict(ContextHelper.CTX_CLASS)):
+        if  not self.__ctxh.is_ctx_restrict(ContextHelper.CTX_GLOBAL):
             # throws error
             return errorHandler.throw__error(
                 errorType.SEMANTIC_ERROR, "function declairation must be in global scope!",
@@ -643,6 +652,7 @@ class BrackiesParser(BrackiesTokenizer):
 
         # list of member
         return tuple(_class_member)
+
     ############### COMPOUND ################
     def __p_if_stmnt(self):
 
@@ -700,7 +710,10 @@ class BrackiesParser(BrackiesTokenizer):
 
         _switch_body = self.switch_body()
 
-        return
+        return SwitchNode(
+            switch_cond = _expr,
+            switch_body = _switch_body
+        )
     
     def switch_body(self):
 
@@ -764,6 +777,49 @@ class BrackiesParser(BrackiesTokenizer):
 
         # match, ifmatch
         return (_matches, self.__p_statement())
+    
+    ############## ITERATION #################
+
+    def __p_do_while_stmnt(self):
+        # push loop context
+        self.__ctxh.push_ctx(ContextHelper.CTX_LOOP)
+
+         # eat keyw: "do"
+        self.__eat(Keywords.KEYW_DO)
+
+
+        # while body
+        _do_while_body = self.__p_statement()
+
+        # eat keyw: "while"
+        self.__eat(Keywords.KEYW_WHILE)
+
+        _opt = self.__ctokn
+        # eat opt: "("
+        self.__eat("(")
+
+        _condition = self.__p_expression()
+        if  not _condition:
+            # throws error
+            return errorHandler.throw__error(
+                errorType.SYNTAX_ERROR, "expects condition after \"" + _opt.getSymbol() + "\"!",
+                trace__token(_opt)
+            )
+
+        # eat opt: ")"
+        self.__eat(")")
+
+        # eat opt: ";"
+        self.__eat(";")
+
+        # pop loop context
+        self.__ctxh.pop_ctx()
+        
+        return DoWhileNode(
+            do_while_body = _do_while_body,
+            condition  = _condition,
+            
+        )
 
     ###### WHILE STATEMENT      #####
     def __p_while_stmnt(self):
@@ -867,6 +923,63 @@ class BrackiesParser(BrackiesTokenizer):
         return BlockNode(
             statements = tuple(_statement_list)
         )
+
+    ###### CONTINUE STATEMENT      #####
+    def __p_continue(self):
+        if  not self.__ctxh.is_ctx(ContextHelper.CTX_LOOP):
+            # throws error
+            return errorHandler.throw__error(
+                errorType.SEMANTIC_ERROR, "invalid \"" + self.__ctokn.getSymbol() + "\" statement outside loop scope!",
+                trace__token(self.__ctokn)
+            )
+        
+        # eat keyw: "continue"
+        self.__eat(Keywords.KEYW_CONTINUE)
+        
+        # eat opt: ";"
+        self.__eat(";")
+
+        # return
+        return ContinueNode()
+
+    ###### BREAK STATEMENT      #####
+    def __p_break(self):
+        if  not self.__ctxh.is_ctx(ContextHelper.CTX_LOOP):
+            # throws error
+            return errorHandler.throw__error(
+                errorType.SEMANTIC_ERROR, "invalid \"" + self.__ctokn.getSymbol() + "\" statement outside loop scope!",
+                trace__token(self.__ctokn)
+            )
+        
+        # eat keyw: "break"
+        self.__eat(Keywords.KEYW_BREAK)
+        
+        # eat opt: ";"
+        self.__eat(";")
+
+        # return
+        return BreakNode()
+
+    ###### YIELD STATEMENT      #####
+    def __p_yield(self):
+        if  not self.__ctxh.is_ctx(ContextHelper.CTX_FUNCTION):
+            # throws error
+            return errorHandler.throw__error(
+                errorType.SEMANTIC_ERROR, "invalid \"" + self.__ctokn.getSymbol() + "\" statement outside function scope!",
+                trace__token(self.__ctokn)
+            )
+        
+        # eat keyw: "yield"
+        self.__eat(Keywords.KEYW_YIELD)
+
+        # return expr
+        _expr = self.__p_expression()
+        
+        # eat opt: ";"
+        self.__eat(";")
+
+        # return
+        return YieldNode(expression = _expr)
     
     ###### RETURN STATEMENT     #####
     def __p_return(self):

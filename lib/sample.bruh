@@ -1,40 +1,10 @@
 
+class Int {
 
-class Int with Obj {
+    static x:Int = 2;
 
-    public static x:Int = 2, y:Int;
-
-}
-
-function factorial:Int(_n:Int) {
-    if (_n <= 1) return 1;
-    return _n * factorial(_n - 1);
-}
-
-var fact:Any = factorial(5);
-println(fact);
-
-while(2) {
-
-    2 + 2;
-
-}
-
-for(x:Int ... [1,2,3,4])
-    println(x);
-
-{
-    { let x:Int = 2; }
-}
-
-const x:Int = 2;
-
-switch(2) {
-    case 2, 3, 4 : {
-
+    public static function add:Null(_a:Int) {
+        return;
     }
-    case 2, 3, 4 : {
 
-    }
-    default: 2 + 2;
 }
